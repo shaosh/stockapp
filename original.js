@@ -28,6 +28,7 @@ var margin = {
 			  .orient('right')
 			  .ticks(10),
 	stockdata = [];
+console.log(hVolume);
 var svgStream = d3.select('body')
 				.append('svg')
 					.attr('width', w + margin.right + margin.left)
@@ -64,7 +65,7 @@ var createHistoryUrl = function(symbol, startDate, endDate){
 			+ "'&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys";
 };
 
-var historyUrl = createHistoryUrl('goog', '2014-01-04', '2014-11-06');
+var historyUrl = createHistoryUrl('goog', '2013-01-10', '2014-11-08');
 
 //Streaming chart
 d3.json(historyUrl, function(error, data){
@@ -79,20 +80,15 @@ d3.json(historyUrl, function(error, data){
 		maxYStream = d3.max(data.query.results.quote, function(d){return d.Close}),
 		minYVolume = d3.min(data.query.results.quote, function(d){return d.Volume}),
 		maxYVolume = d3.max(data.query.results.quote, function(d){return d.Volume}),
-		minYK = d3.min(data.query.results.quote, function(d){return d.Low}),
-		maxYK = d3.max(data.query.results.quote, function(d){return d.High}),
 		diffYStream = maxYStream - minYStream,
 		diffYVolume = maxYVolume - minYVolume,
-		diffYK = maxYK - minYK,
 		realminYStream = minYStream - diffYStream * 0.1,
 		realmaxYStream = parseInt(maxYStream) + diffYStream * 0.1,
-		realmaxYVolume = parseInt(maxYVolume) + diffYVolume * 0.1,
-		realminYK = minYK - diffYK * 0.1,
-		realmaxYK = parseInt(maxYK) + diffYK * 0.1;
+		realmaxYVolume = parseInt(maxYVolume) + diffYVolume * 0.1;
+
 	x.domain([minX, maxX]);
 	yStream.domain([realminYStream, realmaxYStream]);
 	yVolume.domain([0, realmaxYVolume]);
-	yK.domain([realminYK, realmaxYK]);
 	var lineGraph = svgStream.append('path')
 						.attr('d', lineFunction(data.query.results.quote))
 					   	.attr('stroke', '#52B7FF')
@@ -112,8 +108,8 @@ d3.json(historyUrl, function(error, data){
 						.enter()
 						.append('rect')
 						.attr('x', function(d){return x(d.Date);})
-						.attr('y', function(d){return yVolume(d.Volume) ;})
-						.attr('height', function(d){return hVolume - yVolume(d.Volume);})
+						.attr('y', function(d){return hVolume - yVolume(d.Volume) ;})
+						.attr('height', function(d){console.log(d.Volume, yVolume(d.Volume));return yVolume(d.Volume);})
 						.attr('width', 5)
 						.attr('fill', 'black')
 						.attr('stroke-width', 2)
@@ -128,67 +124,6 @@ d3.json(historyUrl, function(error, data){
 	   	.attr("class", "axis")
 	   	.attr("transform", "translate(" + w + ", 0)")
 	   	.call(yVolumeAxis);
-
-	var kGraph = svgK.selectAll('rect')
-					.data(data.query.results.quote)
-					.enter()
-					.append('rect')
-					.attr('x', function(d){return x(d.Date);})
-					.attr('y', function(d){return  yK(Math.max(d.Open, d.Close));})
-					.attr('height', function(d){return Math.abs(yK(d.Open) - yK(d.Close));})
-					.attr('width', 5)
-					.attr('fill', 'black')
-					.attr('stroke', 'red');
-	
-	// svgK.selectAll('.high')
-	// 	.data(data.query.results.quote)
-	// 	.enter()
-	// 	.append('line')
-	// 	.attr('x1', function(d){return x(d.Date);})
-	// 	.attr('y1', function(d){return hK - yK(d.High);})
-	// 	.attr('x2', function(d){return x(d.Date) + 5;})
-	// 	.attr('y2', function(d){return hK - yK(d.High);})
-	// 	.attr('stroke', 'red');
-
-	// svgK.selectAll('.low')
-	// 	.data(data.query.results.quote)
-	// 	.enter()
-	// 	.append('line')
-	// 	.attr('x1', function(d){return x(d.Date);})
-	// 	.attr('y1', function(d){return hK - yK(d.Low);})
-	// 	.attr('x2', function(d){return x(d.Date) + 5;})
-	// 	.attr('y2', function(d){return hK - yK(d.Low);})
-	// 	.attr('stroke', 'red');
-
-	svgK.selectAll('.uppershadow')
-		.data(data.query.results.quote)
-		.enter()
-		.append('line')
-		.attr('x1', function(d){return x(d.Date) + 2.5;})
-		.attr('y1', function(d){return yK(d.High);})
-		.attr('x2', function(d){return x(d.Date) + 2.5;})
-		.attr('y2', function(d){return yK(Math.max(d.Open, d.Close));})
-		.attr('stroke', 'green');
-
-	svgK.selectAll('.lowershadow')
-		.data(data.query.results.quote)
-		.enter()
-		.append('line')
-		.attr('x1', function(d){return x(d.Date) + 2.5;})
-		.attr('y1', function(d){return yK(d.Low);})
-		.attr('x2', function(d){return x(d.Date) + 2.5;})
-		.attr('y2', function(d){return yK(Math.min(d.Open, d.Close));})
-		.attr('stroke', 'blue');
-
-	svgK.append('g')
-	   	.attr("class", "axis")
-	   	.attr("transform", "translate(0," + hK + ")")
-	   	.call(xAxis);
-
-	svgK.append('g')
-	   	.attr("class", "axis")
-	   	.attr("transform", "translate(" + w + ", 0)")
-	   	.call(yKAxis);
 });
 
 var createBoxplot = function(open, close, highest, lowest){

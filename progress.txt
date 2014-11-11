@@ -1,0 +1,8 @@
+11.11.2014
+Stream chart, volume chart and K chart are done.
+
+Future tasks:
+1. Complete data source.
+2. Remove non-trading days.
+3. Simple Moving Average.
+4. Calculate bar width.
