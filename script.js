@@ -2,7 +2,7 @@ var margin = {
 		'top': 0,
 		'right': 50,
 		'bottom': 20,
-		'left': 20
+		'left': 50
 	},
 	w = 1000 - margin.left - margin.right,
 	// h = 800 - margin.top - margin.bottom - margin.bottom,	
@@ -11,13 +11,14 @@ var margin = {
 	hStream = 500 - margin.top - margin.bottom,
 	hVolume = 120 - margin.top - margin.bottom,
 	hK = 500 - margin.top - margin.bottom,
-	x = d3.time.scale().range([0, w]),
+	// x = d3.time.scale().range([0, w]),
+	x = d3.scale.linear().range([0, w]),
 	yStream = d3.scale.linear().range([hStream, 0]),
 	yVolume = d3.scale.linear().range([hVolume, 0]),
 	yK = d3.scale.linear().range([hK, 0]),
 	xAxis = d3.svg.axis().scale(x)
 			  .orient('bottom')
-			  .ticks(5),
+			  .ticks(10),
 	yStreamAxis = d3.svg.axis().scale(yStream)
 			  .orient('right')
 			  .ticks(10),
@@ -50,7 +51,7 @@ var svgStream = d3.select('body')
 var parseDate = d3.time.format("%Y-%m-%d").parse;
 
 var lineFunction = d3.svg.line()
-					 .x(function(d){return x(d.Date);})
+					 .x(function(d, i){return x(i);})
 					 .y(function(d){return yStream(d.Close);})
 					 .interpolate('linear');
 
@@ -68,19 +69,17 @@ var historyUrl = createHistoryUrl('goog', '2014-01-04', '2014-11-06');
 
 //Streaming chart
 d3.json(historyUrl, function(error, data){
-	data.query.results.quote.forEach(function(d){
-		d.Date = parseDate(d.Date);
+	stockdata = data.query.results.quote;
+	stockdata = stockdata.reverse();//This is because Yahoo return data from late to early
+	stockdata.forEach(function(d){
 		d.Volume = d.Volume / 1000;
 	});
-	stockdata = data;
-	var minX = d3.min(data.query.results.quote, function(d){return d.Date}),
-		maxX = d3.max(data.query.results.quote, function(d){return d.Date}),
-		minYStream = d3.min(data.query.results.quote, function(d){return d.Close}),
-		maxYStream = d3.max(data.query.results.quote, function(d){return d.Close}),
-		minYVolume = d3.min(data.query.results.quote, function(d){return d.Volume}),
-		maxYVolume = d3.max(data.query.results.quote, function(d){return d.Volume}),
-		minYK = d3.min(data.query.results.quote, function(d){return d.Low}),
-		maxYK = d3.max(data.query.results.quote, function(d){return d.High}),
+	var	minYStream = d3.min(stockdata, function(d){return d.Close}),
+		maxYStream = d3.max(stockdata, function(d){return d.Close}),
+		minYVolume = d3.min(stockdata, function(d){return d.Volume}),
+		maxYVolume = d3.max(stockdata, function(d){return d.Volume}),
+		minYK = d3.min(stockdata, function(d){return d.Low}),
+		maxYK = d3.max(stockdata, function(d){return d.High}),
 		diffYStream = maxYStream - minYStream,
 		diffYVolume = maxYVolume - minYVolume,
 		diffYK = maxYK - minYK,
@@ -89,12 +88,15 @@ d3.json(historyUrl, function(error, data){
 		realmaxYVolume = parseInt(maxYVolume) + diffYVolume * 0.1,
 		realminYK = minYK - diffYK * 0.1,
 		realmaxYK = parseInt(maxYK) + diffYK * 0.1;
-	x.domain([minX, maxX]);
+	// x.domain([minX, maxX]);
+	x.domain([0, stockdata.length - 1]);
+	xAxis.tickFormat(function(d){return stockdata[d].Date;});
+
 	yStream.domain([realminYStream, realmaxYStream]);
 	yVolume.domain([0, realmaxYVolume]);
 	yK.domain([realminYK, realmaxYK]);
 	var lineGraph = svgStream.append('path')
-						.attr('d', lineFunction(data.query.results.quote))
+						.attr('d', lineFunction(stockdata))
 					   	.attr('stroke', '#52B7FF')
 					   	.attr('stroke-width', 2)
 					   	.attr('fill', 'none');
@@ -108,13 +110,13 @@ d3.json(historyUrl, function(error, data){
 	   	.call(yStreamAxis);
  
 	var rectGraph = svgVolume.selectAll('rect')
-						.data(data.query.results.quote)
+						.data(stockdata)
 						.enter()
 						.append('rect')
-						.attr('x', function(d){return x(d.Date);})
+						.attr('x', function(d, i){return x(i);})
 						.attr('y', function(d){return yVolume(d.Volume) ;})
 						.attr('height', function(d){return hVolume - yVolume(d.Volume);})
-						.attr('width', 5)
+						.attr('width', 10)
 						.attr('fill', 'black')
 						.attr('stroke-width', 2)
 						.attr('stroke', 'red');
@@ -130,53 +132,33 @@ d3.json(historyUrl, function(error, data){
 	   	.call(yVolumeAxis);
 
 	var kGraph = svgK.selectAll('rect')
-					.data(data.query.results.quote)
+					.data(stockdata)
 					.enter()
 					.append('rect')
-					.attr('x', function(d){return x(d.Date);})
+					.attr('x', function(d, i){return x(i);})
 					.attr('y', function(d){return  yK(Math.max(d.Open, d.Close));})
 					.attr('height', function(d){return Math.abs(yK(d.Open) - yK(d.Close));})
 					.attr('width', 5)
 					.attr('fill', 'black')
 					.attr('stroke', 'red');
-	
-	// svgK.selectAll('.high')
-	// 	.data(data.query.results.quote)
-	// 	.enter()
-	// 	.append('line')
-	// 	.attr('x1', function(d){return x(d.Date);})
-	// 	.attr('y1', function(d){return hK - yK(d.High);})
-	// 	.attr('x2', function(d){return x(d.Date) + 5;})
-	// 	.attr('y2', function(d){return hK - yK(d.High);})
-	// 	.attr('stroke', 'red');
-
-	// svgK.selectAll('.low')
-	// 	.data(data.query.results.quote)
-	// 	.enter()
-	// 	.append('line')
-	// 	.attr('x1', function(d){return x(d.Date);})
-	// 	.attr('y1', function(d){return hK - yK(d.Low);})
-	// 	.attr('x2', function(d){return x(d.Date) + 5;})
-	// 	.attr('y2', function(d){return hK - yK(d.Low);})
-	// 	.attr('stroke', 'red');
 
 	svgK.selectAll('.uppershadow')
-		.data(data.query.results.quote)
+		.data(stockdata)
 		.enter()
 		.append('line')
-		.attr('x1', function(d){return x(d.Date) + 2.5;})
+		.attr('x1', function(d, i){return x(i) + 2.5;})
 		.attr('y1', function(d){return yK(d.High);})
-		.attr('x2', function(d){return x(d.Date) + 2.5;})
+		.attr('x2', function(d, i){return x(i) + 2.5;})
 		.attr('y2', function(d){return yK(Math.max(d.Open, d.Close));})
 		.attr('stroke', 'green');
 
 	svgK.selectAll('.lowershadow')
-		.data(data.query.results.quote)
+		.data(stockdata)
 		.enter()
 		.append('line')
-		.attr('x1', function(d){return x(d.Date) + 2.5;})
+		.attr('x1', function(d, i){return x(i) + 2.5;})
 		.attr('y1', function(d){return yK(d.Low);})
-		.attr('x2', function(d){return x(d.Date) + 2.5;})
+		.attr('x2', function(d, i){return x(i) + 2.5;})
 		.attr('y2', function(d){return yK(Math.min(d.Open, d.Close));})
 		.attr('stroke', 'blue');
 
